@@ -2,9 +2,9 @@ import llm
 
 @llm.hookimpl
 def register_models(register):
-    register(Markov())
+    register(Dust())
 
-class Markov(llm.Model):
+class Dust(llm.Model):
     model_id = "dust"
 
     def execute(self, prompt, stream, response, conversation):
