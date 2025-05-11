@@ -29,6 +29,14 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "List agents",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "llm",
+      "args": ["agents"],
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Run model",
       "type": "debugpy",
       "request": "launch",

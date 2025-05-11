@@ -23,15 +23,11 @@ def get_dust_headers():
 def list_agents():
     url = f"{dust_url}/api/v1/w/{wld}/assistant/agent_configurations"
 
-    try:
-        response = requests.get(url, headers=get_dust_headers())
-        response.raise_for_status()
-        agents = response.json()
-        for agent in agents["agentConfigurations"]:
-            yield {"name": agent["name"], "sId": agent["sId"]}
-    except requests.exceptions.RequestException as e:
-        # Just return without yielding if there's an error
-        return
+    response = requests.get(url, headers=get_dust_headers())
+    response.raise_for_status()
+    agents = response.json()
+    for agent in agents["agentConfigurations"]:
+        yield agent
 
 def create_new_conversation(agent_id, user_prompt):
     url = f"{dust_url}/api/v1/w/{wld}/assistant/conversations"
@@ -72,7 +68,7 @@ def get_conversation_events(conversation_id, timeout=30):
         for line in response.iter_lines():
             if line:
                 decoded_line = line.decode('utf-8')
-                print(decoded_line)
+                # print(decoded_line)
                 if decoded_line == "data: done":
                     print("Stream finished.")
                     break
@@ -161,7 +157,7 @@ def register_commands(cli):
     @cli.command(name="agents")
     def agents():
         for agent_info in list_agents():
-            print(agent_info["name"])
+            print(f"{agent_info["name"]}: {agent_info["description"]}")
         
 class Dust(llm.KeyModel):
     def __init__(self, name, sId):
@@ -174,38 +170,39 @@ class Dust(llm.KeyModel):
         conversation_id = create_new_conversation(self.agent_id, prompt.prompt)
         # conversation_id = "IrsNT9G1xd"
 
-        print(f"Conversation ID: {conversation_id}")
+        # print(f"Conversation ID: {conversation_id}")
 
         for event in get_conversation_events(conversation_id):
-            if event["type"] == "user_message_new":
-                content = event["message"]["content"]
-                print(f"User: {content}")
-            elif event["type"] == "agent_message_new":
-                messageId = event["message"]["sId"]
-                print(f"Agent Message ID: {messageId}")
-              
-                for message_event in get_message_events(conversation_id, messageId):
-                    if message_event["type"] == "retrieval_params":
-                        print(f"Retrieval Params: {message_event['dataSources']}")
-                    elif message_event["type"] == "dust_app_run_params":
-                        print(f"Dust App Run Params: {message_event['action']}")
-                    elif message_event["type"] == "dust_app_run_block":
-                        print(f"Dust App Run Block: {message_event['action']}")
-                    elif message_event["type"] == "agent_action_success":
-                        print(f"Agent Action Success: {message_event['action']}")
-                    elif message_event["type"] == "generation_tokens":
-                        content = message_event["text"]
-                        # print(f"Generation Tokens: {content}")
-                        yield content
-                    elif message_event["type"] == "agent_message_success":
-                        print(f"Agent Message Success: {message_event['message']}")
-                        break
-                    elif message_event["type"] == "agent_error":
-                        print(f"Agent Error: {message_event['error']}")
-                    else:
-                        print(f"Unknown message event type: {message_event['type']}")
+            match event["type"]:
+                case "user_message_new":
+                    # content = event["message"]["content"]
+                    # print(f"User: {content}")
+                    pass
+                case "agent_message_new":
+                    messageId = event["message"]["sId"]
+                    # print(f"Agent Message ID: {messageId}")
+                
+                    for message_event in get_message_events(conversation_id, messageId):
+                        match message_event["type"]:
+                            case "retrieval_params":
+                                print(f"Retrieval Params: {message_event['dataSources']}")
+                            case "dust_app_run_params":
+                                print(f"Dust App Run Params: {message_event['action']}")
+                            case "dust_app_run_block":
+                                print(f"Dust App Run Block: {message_event['action']}")
+                            case "agent_action_success":
+                                print(f"Agent Action Success: {message_event['action']}")
+                            case "generation_tokens":
+                                yield message_event["text"]
+                            case "agent_message_success":
+                                # print("Agent Message Success!")
+                                return
+                            case "agent_error":
+                                print(f"Agent Error: {message_event['error']}")
+                            case "_":
+                                print(f"Unknown message event type: {message_event['type']}")
 
-            elif event["type"] == "conversation_title":
-                print(f"Conversation Title: {event['title']}")
-            else:
-                print(f"Unknown event type: {event['type']}")
+                case "conversation_title":
+                    print(f"Conversation Title: {event['title']}")
+                case "_":
+                    print(f"Unknown event type: {event['type']}")
