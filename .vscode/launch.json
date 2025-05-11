@@ -43,6 +43,14 @@
       "module": "llm",
       "args": ["-m", "fruity", "What's the capital of France?"],
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Chat",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "llm",
+      "args": ["chat", "-m", "fruity"],
+      "console": "integratedTerminal"
     }
   ]
 }
