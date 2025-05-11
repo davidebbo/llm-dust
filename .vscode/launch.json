@@ -33,7 +33,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "llm",
-      "args": ["-m", "fruity", "David"],
+      "args": ["-m", "fruity", "What's the capital of France?"],
       "console": "integratedTerminal"
     }
   ]
