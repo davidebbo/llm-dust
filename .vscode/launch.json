@@ -5,7 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: llm install",
+      "name": "Install plugin",
       "type": "debugpy",
       "request": "launch",
       "module": "llm",
@@ -13,19 +13,27 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Python: llm pluggings",
+      "name": "List plugings",
       "type": "debugpy",
       "request": "launch",
       "module": "llm",
-      "args": ["pluggins"],
+      "args": ["plugins"],
       "console": "integratedTerminal"
     },
     {
-      "name": "Python: llm run model",
+      "name": "List models",
       "type": "debugpy",
       "request": "launch",
       "module": "llm",
-      "args": ["-m", "dust", "hello"],
+      "args": ["models"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run model",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "llm",
+      "args": ["-m", "fruity", "David"],
       "console": "integratedTerminal"
     }
   ]

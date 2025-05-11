@@ -5,7 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "dotenv>=0.9.9",
     "llm>=0.25",
+    "requests>=2.32.3",
 ]
 
 [project.entry-points.llm]
