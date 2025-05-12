@@ -80,12 +80,14 @@ def get_conversation_events(conversation_id, timeout=30):
     return get_events_helper(url)
 
 def get_message_events(conversation_id, message_id):
+    """Retrieve and yield events from a specific message in a conversation."""
     url = f"{dust_url}/api/v1/w/{wld}/assistant/conversations/{conversation_id}/messages/{message_id}/events"
     return get_events_helper(url)
 
 
 @llm.hookimpl
 def register_models(register):
+    """Register all available Dust agents as models."""
     for agent_info in list_agents():
         register(
             Dust(agent_info["name"], agent_info["sId"])
@@ -96,25 +98,28 @@ def register_models(register):
 def register_commands(cli):
     @cli.command(name="dust-agents")
     def agents():
+        """List all available Dust agents with their descriptions."""
         for agent_info in list_agents():
-            print(f"{agent_info["name"]}: {agent_info["description"]}")
+            print(f"{agent_info['name']}: {agent_info['description']}")
         
+
 class Dust(llm.KeyModel):
-    def __init__(self, name, sId):
+    def __init__(self, name, agent_id):
         self.model_id = name
-        self.agent_id = sId
+        self.agent_id = agent_id
         self.can_stream = True
         self.conversation_id = None
         self.processed_message_ids = set()
         super().__init__()
 
     def execute(self, prompt, stream, response, conversation, key):
+        """Execute a prompt against the Dust agent and stream the response."""
         message_id = None
         if not self.conversation_id:
-            # It feels dirty to store this in the class, but not sure how else to do it
+            # Create a new conversation if one doesn't exist yet
+            # It feels dirty to store the id in the class, but not sure how else to do it
             # unless we can get the command line to preserve state
             self.conversation_id = create_new_conversation(self.agent_id, prompt.prompt)
-            # print(f"Conversation ID: {conversation_id}")
         else:
             add_to_conversation(self.agent_id, prompt.prompt, self.conversation_id)
 
