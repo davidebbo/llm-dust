@@ -33,7 +33,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "llm",
-      "args": ["agents"],
+      "args": ["dust-agents"],
       "console": "integratedTerminal"
     },
     {
