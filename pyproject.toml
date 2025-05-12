@@ -1,7 +1,7 @@
 [project]
 name = "llm-dust"
 version = "0.1.0"
-description = "Add your description here"
+description = "Plugin to add Dust AI support to the LLM CLI"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
