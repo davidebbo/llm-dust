@@ -1,3 +1,5 @@
+from pathlib import Path
+from typing import Optional
 import llm
 import json
 import os
@@ -22,6 +24,15 @@ def register_commands(cli):
 
 
 class Dust(llm.KeyModel):
+    attachment_types = {
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "text/plain",
+        "text/csv",
+        "application/pdf",
+    }
+
     def __init__(self, name, agent_id):
         self.model_id = name
         self.agent_id = agent_id
@@ -37,7 +48,7 @@ class Dust(llm.KeyModel):
             # Create a new conversation if one doesn't exist yet
             # It feels dirty to store the id in the class, but not sure how else to do it
             # unless we can get the command line to preserve state
-            self.conversation_id = create_new_conversation(self.agent_id, prompt.prompt)
+            self.conversation_id = create_new_conversation(self.agent_id, prompt)
         else:
             add_to_conversation(self.agent_id, prompt.prompt, self.conversation_id)
 
@@ -108,17 +119,24 @@ def list_agents():
         yield agent
 
 
-def create_new_conversation(agent_id, user_prompt):
+def create_new_conversation(agent_id, prompt: llm.Prompt):
     url = f"{dust_url}/api/v1/w/{wld}/assistant/conversations"
     data = {
         "message": {
-            "content": user_prompt,
+            "content": prompt.prompt,
             "mentions": [{"configurationId": agent_id}],
             "context": {
                 "username": "dust-cli-user",
                 "timezone": "Europe/Paris",
             },
         },
+        "contentFragments": [
+            {
+                "title": os.path.basename(attachment.path),
+                "fileId": upload_file_and_get_attachment_id(attachment),
+            }
+            for attachment in prompt.attachments
+        ],
         "blocking": False,  # Because we want to stream the response
     }
 
@@ -167,3 +185,58 @@ def get_message_events(conversation_id, message_id):
     """Retrieve and yield events from a specific message in a conversation."""
     url = f"{dust_url}/api/v1/w/{wld}/assistant/conversations/{conversation_id}/messages/{message_id}/events"
     return get_events_helper(url)
+
+
+def upload_file_and_get_attachment_id(attachment: llm.Attachment) -> None:
+    # Get a URL that the file can be uploaded to
+    upload_url = get_file_upload_url(attachment.path, attachment.type)
+
+    # Upload the file to that URL
+    return upload_file(attachment.path, upload_url, attachment.type)
+
+
+def get_file_upload_url(file_path: str, content_type: str) -> Optional[str]:
+    path = Path(file_path)
+
+    if not path.exists():
+        print(f"File not found: {file_path}")
+        return None
+
+    try:
+        file_size = path.stat().st_size
+    except OSError as e:
+        print(f"Error accessing file {file_path}: {e}")
+        return None
+
+    url = f"{dust_url}/api/v1/w/{wld}/files"
+    data = {
+        "contentType": content_type,
+        "fileName": path.name,
+        "fileSize": file_size,
+        "useCase": "conversation",
+    }
+
+    try:
+        response = requests.post(url, headers=get_dust_headers(), json=data)
+        response.raise_for_status()
+        return response.json()["file"]["uploadUrl"]
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting upload URL for {file_path}: {e}")
+        return None
+
+
+def upload_file(file_path: str, upload_url: str, content_type: str) -> Optional[str]:
+    path = Path(file_path)
+    try:
+        with path.open("rb") as file:
+            files = {"file": (path.name, file, content_type)}
+            response = requests.post(
+                upload_url,
+                headers={"Authorization": f"Bearer {dust_token}"},
+                files=files,
+            )
+            response.raise_for_status()
+            return response.json()["file"]["sId"]
+    except requests.exceptions.RequestException as e:
+        print(f"Error uploading file {file_path}: {e}")
+        return None

@@ -37,11 +37,19 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Run model",
+      "name": "Prompt model",
       "type": "debugpy",
       "request": "launch",
       "module": "llm",
       "args": ["-m", "fruity", "What's the capital of France?"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Prompt attachment",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "llm",
+      "args": ["-m", "fruity", "-a", "colors.txt", "What's in this file?"],
       "console": "integratedTerminal"
     },
     {
