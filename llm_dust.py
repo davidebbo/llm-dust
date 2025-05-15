@@ -35,37 +35,45 @@ class Dust(llm.KeyModel):
 
     def __init__(self, name, agent_id):
         self.model_id = name
-        self.agent_id = agent_id
         self.can_stream = True
-        self.conversation_id = None
-        self.processed_message_ids = set()
+        self.agent_id = agent_id
         super().__init__()
 
     def execute(self, prompt, stream, response, conversation, key):
         """Execute a prompt against the Dust agent and stream the response."""
-        message_id = None
-        if not self.conversation_id:
+        response.response_json = {}
+        if not conversation:
             # Create a new conversation if one doesn't exist yet
-            # It feels dirty to store the id in the class, but not sure how else to do it
-            # unless we can get the command line to preserve state
-            self.conversation_id = create_new_conversation(self.agent_id, prompt)
-        else:
-            add_to_conversation(self.agent_id, prompt.prompt, self.conversation_id)
+            conversation_id = create_new_conversation(self.agent_id, prompt)
 
-        for event in get_conversation_events(self.conversation_id):
+            # Save it in the response object to allow conversation continuation
+            response.response_json["dust_conversation_id"] = conversation_id
+
+            processed_message_ids = set()
+        else:
+            conversation_id = conversation.responses[0].response_json[
+                "dust_conversation_id"
+            ]
+            processed_message_ids = {
+                response.response_json["dust_message_id"]
+                for response in conversation.responses
+            }
+            add_to_conversation(self.agent_id, prompt.prompt, conversation_id)
+
+        for event in get_conversation_events(conversation_id):
             match event["type"]:
                 case "user_message_new":
                     # We don't care about the user message events
                     pass
                 case "agent_message_new":
                     message_id = event["message"]["sId"]
-                    if message_id in self.processed_message_ids:
+                    if message_id in processed_message_ids:
                         continue
 
-                    self.processed_message_ids.add(message_id)
+                    response.response_json["dust_message_id"] = message_id
 
                     for message_event in get_message_events(
-                        self.conversation_id, message_id
+                        conversation_id, message_id
                     ):
                         match message_event["type"]:
                             case "generation_tokens":

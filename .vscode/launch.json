@@ -53,6 +53,14 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Prompt attach continuation",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "llm",
+      "args": ["-m", "fruity", "-c", "How many colors are there?"],
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Chat",
       "type": "debugpy",
       "request": "launch",
