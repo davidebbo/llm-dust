@@ -90,7 +90,23 @@ class Dust(llm.KeyModel):
                                 print(f"Message Event: {message_event['type']}")
                             case "agent_error":
                                 print(f"Agent Error: {message_event['error']}")
-                            case "_":
+                            case "tool_params":
+                                print(
+                                    f"tool {message_event['action']['functionCallName']} called with {message_event['action']['params']}"
+                                )
+                            case "tool_approve_execution":
+                                # For now, we just approve all tool actions
+                                action_id = message_event["actionId"]
+                                print(
+                                    f"Tool Action {action_id} requires approval. Approving..."
+                                )
+                                validate_action(
+                                    conversation_id,
+                                    message_id,
+                                    action_id,
+                                    "approved",
+                                )
+                            case _:
                                 print(
                                     f"Unknown message event type: {message_event['type']}"
                                 )
@@ -98,7 +114,7 @@ class Dust(llm.KeyModel):
                 case "conversation_title":
                     # print(f"Conversation Title: {event['title']}")
                     pass
-                case "_":
+                case _:
                     print(f"Unknown event type: {event['type']}")
 
 
@@ -145,6 +161,7 @@ def create_new_conversation(agent_id, prompt: llm.Prompt):
             }
             for attachment in prompt.attachments
         ],
+        # "skipToolsValidation": True, # if True, we don't get tool_approve_execution events
         "blocking": False,  # Because we want to stream the response
     }
 
@@ -193,6 +210,18 @@ def get_message_events(conversation_id, message_id):
     """Retrieve and yield events from a specific message in a conversation."""
     url = f"{dust_url}/api/v1/w/{wld}/assistant/conversations/{conversation_id}/messages/{message_id}/events"
     return get_events_helper(url)
+
+
+def validate_action(conversation_id, message_id, actionId, approved):
+    url = f"{dust_url}/api/v1/w/{wld}/assistant/conversations/{conversation_id}/messages/{message_id}/validate-action"
+    data = {
+        "actionId": actionId,
+        "approved": approved,
+    }
+
+    response = requests.post(url, headers=get_dust_headers(), json=data)
+    response.raise_for_status()
+    return response.json()
 
 
 def upload_file_and_get_attachment_id(attachment: llm.Attachment) -> None:
